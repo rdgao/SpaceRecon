@@ -2,51 +2,125 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 from scipy.signal import filtfilt, firwin
-import time
 from sklearn.metrics import mutual_info_score
 
 
-def calc_MI(x, y, bins):
+def compute_MI(x, y, bins):
+    """ Compute mutual information between two vectors given custom bins.
+
+    Parameters
+    ----------
+    x, y : array, 1D
+        Signals to compute mutual information between.
+    bins : integer or array, 1D
+        Number of bins (if integer) or bin edges (if array) for 2D histogram.
+
+    Returns
+    -------
+    mi : float
+        Mutual information estimate.
+
     """
-    calculates mutual information between two vectors
-    """
+
     c_xy = np.histogram2d(x, y, bins)[0]
     mi = mutual_info_score(None, None, contingency=c_xy)
     return mi
 
 
-def delay_MI(data, num_bins, max_tau):
+def delay_MI(data, bins, max_tau, tau_step=1):
+    """ Calculates MI at different delays for a time series.
+
+    Parameters
+    ----------
+    data : array, 1D
+        Time series to compute delayed MI over.
+    bins : integer or array, 1D
+        Number of bins (if integer) or bin edges (if array) for 2D histogram.
+    max_tau : int
+        Maximum delay to compute MI, in samples of signal.
+    tau_step : int (default=1)
+        Step size to advance for consecutive MI calculation, in samples of signal.
+
+    Returns
+    -------
+    MI_timepoints : array, 1D
+        Time points (in samples) at which MI was computed.
+    dMI : array, 1D
+        Time lagged mutual information.
+
     """
-    calculates MI at different delays for a time series
+    MI_timepoints = np.arange(0, max_tau, tau_step)
+    dMI = np.zeros(len(MI_timepoints))
+    dMI[0] = compute_MI(data, data, bins)
+    for ind, tau in enumerate(MI_timepoints[1:]):
+        dMI[ind+1] = compute_MI(data[:-tau], data[tau:], bins)
+
+    return MI_timepoints, dMI
+
+
+def autocorr(data, max_lag=1000,lag_step=1):
+    """ Calculate the signal autocorrelation (lagged correlation)
+
+    Parameters
+    ----------
+    data : array 1D
+        Time series to compute autocorrelation over.
+    max_lag : int (default=1000)
+        Maximum delay to compute AC, in samples of signal.
+    lag_step : int (default=1)
+        Step size (lag advance) to move by when computing correlation.
+
+    Returns
+    -------
+    ac_timepoints : array, 1D
+        Time points (in samples) at which correlation was computed.
+    ac : array, 1D
+        Time lagged (auto)correlation.
+
     """
-    dMI = np.zeros(max_tau)
-    dMI[0] = calc_MI(data, data, num_bins)
-    for tau in range(1, max_tau):
-        dMI[tau] = calc_MI(data[:-tau], data[tau:], num_bins)
 
-    return dMI
+    ac_timepoints = np.arange(0, max_lag, lag_step)
+    ac = np.zeros(len(ac_timepoints))
+    ac[0] = np.sum((data-np.mean(data))**2)
+    for ind, lag in enumerate(ac_timepoints[1:]):
+        ac[ind+1] = np.sum((data[:-lag]-np.mean(data[:-lag]))*(data[lag:]-np.mean(data[lag:])))
+
+    return ac_timepoints, ac/ac[0]
 
 
-def first_valley(data):
-    """
-    finds the first valley of a (relatively) smooth vector
-    can be applied to MI or autocorrelation
+def find_valley(data):
+    """ Finds the first valley of a (relatively) smooth vector; can be applied to
+    lagged MI or autocorrelation. If no valley is found, return the last value,
+    which would be the minimum.
 
-    if no valley is found
+    Parameters
+    ----------
+    data : array, 1D
+        Vector to find the first valley in.
+
+    Returns
+    -------
+    valley_ind : int
+        Index in the data where valley is found.
+
+    valley_val : float
+        Data value at the valley or minimum.
+
     """
     # find the first point in data in which first derivative is pos
     if np.where(np.diff(data) > 0.)[0].size:
-        opt_delay = np.where(np.diff(data) > 0.)[0][0]
+        valley_ind = np.where(np.diff(data) > 0.)[0][0]
     else:
-        # if no such point is found, it means MI is monotonically 
-        # decreasing, so return the maximum delay
-        opt_delay = len(data) - 1
+        # if no such point is found, it means data is monotonically
+        # decreasing, so return the end index
+        valley_ind = len(data) - 1
 
     # get the minimum MI (at delay)
-    min_mi = data[opt_delay]
+    valley_val = data[valley_ind]
+    return valley_ind, valley_val
 
-    return opt_delay, min_mi
 
+#--------------
 
 def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
     """
@@ -66,7 +140,7 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
     #check for too much data, switch methods if so
     if num_samples > 30000 and method is 'dist_mat':
         method = 'dist_point'
-        print 'Overriding method, too many data points. Use point-wise calculations.'
+        print('Overriding method, too many data points. Use point-wise calculations.')
 
     # keeping square distance and tacking on new distance for every added dimension
     # faster but much more memory intensive due to square distance matrix
@@ -129,7 +203,7 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
         #now calculate distance in the n+1 dimension
         dist_next_dim = abs(p_next_dim - nn_next_dim)
 
-        #calculate the distance criteria 
+        #calculate the distance criteria
         # (distance gained to nn; #1 from Kennel 1992)
         del_R[:, dim] = dist_next_dim / np.sqrt(nn_Rsq[:, dim])
         # (nn distance relative to attractor size; #2 from Kennel 1992)
