@@ -5,6 +5,69 @@ from scipy.signal import filtfilt, firwin
 import time
 
 
+def sim_powerlaw_signal(T, fs, exponent):
+    """ Generate a power law time series by spectrally rotating a white noise.
+
+    Parameters
+    ----------
+    T : float, seconds
+        Simulation time.
+    fs : float, Hz
+        Sampling rate of simulated signal.
+    exponent : float
+        Desired power-law exponent; alpha in P(f)=f^alpha;
+
+    Returns
+    -------
+    x : array, 1-D
+        Time-series with the desired power-law exponent.
+
+    """
+    sig_len = int(T*fs)
+    x = np.random.randn(sig_len)
+    x_ = rotate_powerlaw(x, fs, delta_f=exponent, f_rotation=0)
+    return sp.stats.zscore(x_)
+
+def rotate_powerlaw(data, fs, delta_f, f_rotation=30):
+    """Takes a time series and changes its power law exponent via rotation in
+    the spectral domain.
+
+    Parameters
+    ----------
+    data : array, 1-D
+        Time-series to be rotated.
+    fs : float, Hz
+        Sampling rate.
+    delta_f : float
+        Change in power law exponent to be applied. Positive is counterclockwise
+        rotation (flatten), negative is clockwise rotation (steepen).
+    f_rotation : float, Hz
+        Axis of rotation frequency, such that power at that frequency is unchanged
+        by the rotation. Only matters if not further normalizing signal variance.
+
+    Returns
+    -------
+    x : array, 1-D
+        Power-law rotated time-series.
+
+    """
+
+    # compute FFT and frequency axis
+    FC = np.fft.fft(data)
+    f_axis = np.fft.fftfreq(len(data), 1./fs)
+
+    # make the 1/f mask
+    f_mask = np.zeros_like(f_axis)
+    f_mask[1:] = 10**(np.log10(np.abs(f_axis[1:]))*delta_f)
+    f_mask[0]=1.
+
+    # normalize power at rotation frequency
+    f_mask = f_mask/f_mask[np.where(f_axis>=f_rotation)[0][0]]
+
+    return np.real(np.fft.ifft(FC*f_mask))
+
+
+
 def inst_cf(data, fs=1000., oscBand=[7., 12.], winLen=1000, stepLen=500):
     """
     Computes instantaneous frequency & other metrics in a single time series
@@ -55,7 +118,7 @@ def inst_cf(data, fs=1000., oscBand=[7., 12.], winLen=1000, stepLen=500):
     filtered = np.convolve(taps, data, 'same')  # one-pass, conv filtering
     if o_msg:
         print 'Computing Hilbert, Power & Phase...'
-    # compute signal derivatives    
+    # compute signal derivatives
     HT = sp.signal.hilbert(filtered)  # calculate hilbert
     IF = np.diff(np.unwrap(np.angle(HT))) * fs / (
         2 * np.pi)  # calculate instantaneous frequency
@@ -91,12 +154,12 @@ def inst_cf(data, fs=1000., oscBand=[7., 12.], winLen=1000, stepLen=500):
 def slidingWindow(data, winLen=1000, stepLen=500):
     """
     Returns a generator that will iterate through
-    the defined lengths of 1D array with window of 
+    the defined lengths of 1D array with window of
     length winLen and step length of stepLen;
     if not a perfect divisor, last slice gets remaining data
     --- Args ---
     data : array, 1d
-        time series to slide over        
+        time series to slide over
 
     winLen : int, samples
         size of sliding window
@@ -123,7 +186,7 @@ def bin_spikes(spikeTimes, binnedLen=-1, spkRate=40000., binRate=1000.):
     """
     Takes a vector of spike times and converted to a binarized array, given
     pre-specified spike sampling rate and binned rate
-    example use: 
+    example use:
         bsp = utils.bin_spikes(spk_times, spkRate=20000., binRate=1250.)
         for ind, win in enumerate(utils.slidingWindow(bsp, winLen=1250, stepLen=1250/2)):
             smob[ind] = sum(win[0])
@@ -279,10 +342,10 @@ def corr_plot(C, labels=None, pv=None, pvThresh=0.01, cmap='RdBu', bounds=None):
     nDim = np.shape(C)[0]
     # draw the square
     plt.imshow(C, interpolation='none', cmap='RdBu', vmin=vmin, vmax=vmax)
-    if labels is not None:        
+    if labels is not None:
         plt.xticks(np.arange(len(labels)), labels)
         plt.yticks(np.arange(len(labels)), labels)
-        
+
 
     plt.xlim(-0.5, nDim-0.5)
     plt.ylim(nDim-0.5, -0.5)

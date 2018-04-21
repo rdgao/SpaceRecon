@@ -3,7 +3,8 @@ import scipy as sp
 import matplotlib.pyplot as plt
 from scipy.signal import filtfilt, firwin
 from sklearn.metrics import mutual_info_score
-
+from sklearn.neighbors import NearestNeighbors
+import time
 
 def compute_MI(x, y, bins):
     """ Compute mutual information between two vectors given custom bins.
@@ -161,7 +162,7 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
     Kennel et al., 1992. Phys Rev A
 
     """
-
+    t0 = time.clock()
     # internal constant to check data length against
     MAX_LEN = 30000
 
@@ -178,13 +179,20 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
         method = 'dist_point'
         print('Overriding method, too many data points. Use point-wise calculations.')
 
+    t1 = time.clock()
+    print(t1-t0)
     # keeping square distance and tacking on new distance for every added dimension
     # faster but much more memory intensive due to square distance matrix
     # not really feasible with more than 30k points due to memory load
     if method == 'dist_mat':
         # pairwise distance matrix R^2, VERY LARGE!
         Rsq = np.zeros((num_samples, num_samples))
+        t2 = time.clock()
+        print(t2-t1)
         for dim in range(max_dim):
+            print('Dim: %i'%dim)
+            print(time.clock()-t2)
+            t2=time.clock()
             # loop over embedding dimensions and calculate NN dist
             for idx in range(num_samples):
                 # add the R^2 from the new dimension
@@ -193,23 +201,37 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
                 # set distance to self as inf
                 Rsq[idx, idx] = np.inf
 
+            t3=time.clock()
+            print('compute distance.')
+            print(t3-t2)
             nn_idx[:, dim] = np.argmin(Rsq, axis=1)
             nn_Rsq[:, dim] = np.min(Rsq, axis=1)
+            t4=time.clock()
+            print('compute neighbors.')
+            print(t4-t3)
 
     elif method == 'dist_point':
         # re-calculate distance for every point with the addition of every added
         # embedding dimension about 4-6 times slower due to loops & recalculating
         # every dimension but won't break computer
         data_vec = np.expand_dims(data[:num_samples], axis=1)
+        t2=time.clock()
+        print(t2-t1)
         for dim in range(max_dim):
+            print('Dim: %i'%dim)
+            t2=time.clock()
             # loop over embedding dimensions and calculate NN dist
             if dim is not 0:
                 # first vectorize delayed data after the first dimension
+                # appending the data after each dim
                 data_vec = np.concatenate(
                     (data_vec, np.expand_dims(
                         data[dim * tau:num_samples + dim * tau], axis=1)),
                     axis=1)
 
+            t3=time.clock()
+            print('vectorize')
+            print(t3-t2)
             for idx in range(num_samples):
                 dist_idx = np.sum((data_vec[idx, :] - data_vec)**2., axis=1)
                 # set distance with self to infinity
@@ -218,6 +240,42 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
                 nn_idx[idx, dim] = np.argmin(dist_idx)
                 nn_Rsq[idx, dim] = np.min(dist_idx)
 
+            t4=time.clock()
+            print('compute distance and neighbors.')
+            print(t4-t3)
+
+    elif method == 'sklearn':
+        # re-calculate distance for every point with the addition of every added
+        # embedding dimension about 4-6 times slower due to loops & recalculating
+        # every dimension but won't break computer
+        data_vec = np.expand_dims(data[:num_samples], axis=1)
+        t2=time.clock()
+        print(t2-t1)
+        for dim in range(max_dim):
+            print('Dim: %i'%dim)
+            t2=time.clock()
+            # loop over embedding dimensions and calculate NN dist
+            if dim is not 0:
+                # first vectorize delayed data after the first dimension
+                # appending the data after each dim
+                data_vec = np.concatenate(
+                    (data_vec, np.expand_dims(
+                        data[dim * tau:num_samples + dim * tau], axis=1)),
+                    axis=1)
+
+            t3=time.clock()
+            print('vectorize')
+            print(t3-t2)
+            # compute nearest neighbor index with sklearn.nearestneighbors
+            dist, idx = NearestNeighbors(n_neighbors=2, algorithm='kd_tree').fit(data_vec).kneighbors(data_vec)
+            nn_Rsq[:,dim] = dist[:,1]**2
+            nn_idx[:,dim] = idx[:,1]
+            t4=time.clock()
+            print('compute distance and neighbors.')
+            print(t4-t3)
+
+
+    t0 = time.clock()
     # now calculate distance criteria for nn going to next dim
     # use std as an estimate of the attractor size
     RA = np.std(data[:num_samples])
@@ -243,6 +301,8 @@ def nn_embed_dist(data, tau=10, max_dim=5, method='dist_mat'):
         # (nn distance relative to attractor size; #2 from Kennel 1992)
         attr_size[:, dim] = np.sqrt(dist_next_dim**2 + nn_Rsq[:, dim]) / RA
 
+    print('compute delR')
+    print(time.clock()-t0)
     return del_R, attr_size, nn_Rsq, nn_idx
 
 
