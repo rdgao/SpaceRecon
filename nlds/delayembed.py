@@ -1,10 +1,7 @@
 import numpy as np
 import scipy as sp
-import matplotlib.pyplot as plt
-from scipy.signal import filtfilt, firwin
 from sklearn.metrics import mutual_info_score
 from sklearn.neighbors import NearestNeighbors
-import time
 
 
 def compute_MI(x, y, bins):
@@ -19,17 +16,14 @@ def compute_MI(x, y, bins):
 
     Returns
     -------
-    mi : float
+    MI : float
         Mutual information estimate.
-
     """
-
     c_xy = np.histogram2d(x, y, bins)[0]
-    mi = mutual_info_score(None, None, contingency=c_xy)
-    return mi
+    return mutual_info_score(None, None, contingency=c_xy)
 
 
-def delay_MI(data, bins, max_tau, tau_step=1):
+def compute_delay_MI(data, bins, max_tau, tau_step=1):
     """ Calculates MI at different delays for a time series.
 
     Parameters
@@ -74,21 +68,21 @@ def autocorr(data, max_lag=1000, lag_step=1):
 
     Returns
     -------
-    ac_timepoints : array, 1D
+    AC_timepoints : array, 1D
         Time points (in samples) at which correlation was computed.
-    ac : array, 1D
+    AC : array, 1D
         Time lagged (auto)correlation.
 
     """
 
-    ac_timepoints = np.arange(0, max_lag, lag_step)
-    ac = np.zeros(len(ac_timepoints))
-    ac[0] = np.sum((data - np.mean(data))**2)
-    for ind, lag in enumerate(ac_timepoints[1:]):
-        ac[ind + 1] = np.sum((data[:-lag] - np.mean(data[:-lag]))
+    AC_timepoints = np.arange(0, max_lag, lag_step)
+    AC = np.zeros(len(AC_timepoints))
+    AC[0] = np.sum((data - np.mean(data))**2)
+    for ind, lag in enumerate(AC_timepoints[1:]):
+        AC[ind + 1] = np.sum((data[:-lag] - np.mean(data[:-lag]))
                              * (data[lag:] - np.mean(data[lag:])))
 
-    return ac_timepoints, ac / ac[0]
+    return AC_timepoints, AC / AC[0]
 
 
 def find_valley(data):
@@ -122,6 +116,7 @@ def find_valley(data):
     valley_val = data[valley_ind]
     return valley_ind, valley_val
 
+
 def delay_embed(data, tau, max_dim):
     """Delay embed data by concatenating consecutive increase delays.
 
@@ -142,6 +137,7 @@ def delay_embed(data, tau, max_dim):
     """
     num_samples = len(data) - tau * (max_dim - 1)
     return np.array([data[dim * tau:num_samples + dim * tau] for dim in range(max_dim)]).T
+
 
 def compute_nn_dist(data, tau=10, max_dim=5):
     """Calculates pairwise distance for all "neighbor" points at every dimension,
@@ -239,13 +235,14 @@ def compute_attractor_dim(del_R, rel_R, pfnn_thr=0.01, R_thr=15., A_thr=2.):
 
     return attr_dim, pfnn
 
+
 def pfnn_de_dim(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2.):
     """Proportion of False Nearest Neighbor method for determining Delay Embedding
     Attractor Dimension. (Kennel et al., 1992).
 
     Basically just an utility function that calls the two functions in one go:
-        - first compute delay-embedded nearest neighbor distances
-        - then use those distances to determine proportion of false neighbors
+        - compute_nn_dist: compute delay-embedded nearest neighbor distances
+        - compute_attractor_dim: use distances to determine proportion of false neighbors
 
     Parameters
     ----------
