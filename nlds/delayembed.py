@@ -74,7 +74,9 @@ def autocorr(data, max_lag=1000, lag_step=1):
         Time lagged (auto)correlation.
 
     """
-
+    ###
+    # have FT implementation
+    ###
     AC_timepoints = np.arange(0, max_lag, lag_step)
     AC = np.zeros(len(AC_timepoints))
     AC[0] = np.sum((data - np.mean(data))**2)

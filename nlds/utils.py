@@ -3,7 +3,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 from scipy.signal import filtfilt, firwin
 import time
-
+from neurodsp import spectral
 
 def sim_powerlaw_signal(T, fs, exponent):
     """ Generate a power law time series by spectrally rotating a white noise.
@@ -67,6 +67,39 @@ def rotate_powerlaw(data, fs, delta_f, f_rotation=30):
     return np.real(np.fft.ifft(FC*f_mask))
 
 
+def compute_features(data, fs, fooof_fit_range=[10,100]):
+    f_axis,psd = spectral.psd(x,fs)
+    plt.subplot(1,2,1)
+    plt.loglog(f_axis,psd)
+
+    feat = np.zeros(4)
+
+    # fooof full linear fit
+    fn = FOOOF(verbose=False)
+    fn.fit(f_axis, psd, fit_range)
+    # get slope
+    feat[1] = fn.get_results().background_params[1]
+
+    # fooof full knee fit
+    fn = FOOOF(background_mode='knee',verbose=False)
+    fn.fit(f_axis, psd, fit_range)
+    # get slope & knee
+    feat[2] = fn.get_results().background_params[1]
+    feat[3] = fn.get_results().background_params[2]
+
+    #dfa
+    t_scales, df, alpha = dfa.dfa(x,fs,n_scales=20, min_scale=0.05, max_scale=5, deg=1, method='dfa')
+    feat[4] = alpha
+
+    print('PSD slope: %f'%feat[0])
+    print('FOOOFed PSD slope: %f'%feat[1])
+    print('kneeFOOOFed PSD slope: %f'%feat[3])
+    print('DFA exponent & DFA estimated 1/f: %f, %f' %(alpha, 2*alpha-1))
+
+    plt.subplot(1,2,2)
+    plt.loglog(t_scales, df, '.', label='DFA');
+    plt.legend()
+    return feat
 
 # def inst_cf(data, fs=1000., oscBand=[7., 12.], winLen=1000, stepLen=500):
 #     """
