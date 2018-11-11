@@ -28,43 +28,43 @@ def sim_powerlaw_signal(T, fs, exponent):
     x_ = rotate_powerlaw(x, fs, delta_f=exponent, f_rotation=0)
     return sp.stats.zscore(x_)
 
-def rotate_powerlaw(data, fs, delta_f, f_rotation=30):
-    """Takes a time series and changes its power law exponent via rotation in
-    the spectral domain.
-
-    Parameters
-    ----------
-    data : array, 1-D
-        Time-series to be rotated.
-    fs : float, Hz
-        Sampling rate.
-    delta_f : float
-        Change in power law exponent to be applied. Positive is counterclockwise
-        rotation (flatten), negative is clockwise rotation (steepen).
-    f_rotation : float, Hz
-        Axis of rotation frequency, such that power at that frequency is unchanged
-        by the rotation. Only matters if not further normalizing signal variance.
-
-    Returns
-    -------
-    x : array, 1-D
-        Power-law rotated time-series.
-
-    """
-
-    # compute FFT and frequency axis
-    FC = np.fft.fft(data)
-    f_axis = np.fft.fftfreq(len(data), 1./fs)
-
-    # make the 1/f mask
-    f_mask = np.zeros_like(f_axis)
-    f_mask[1:] = 10**(np.log10(np.abs(f_axis[1:]))*(delta_f/2))
-    f_mask[0]=1.
-
-    # normalize power at rotation frequency
-    f_mask = f_mask/f_mask[np.where(f_axis>=f_rotation)[0][0]]
-
-    return np.real(np.fft.ifft(FC*f_mask))
+# def rotate_powerlaw(data, fs, delta_f, f_rotation=30):
+#     """Takes a time series and changes its power law exponent via rotation in
+#     the spectral domain.
+#
+#     Parameters
+#     ----------
+#     data : array, 1-D
+#         Time-series to be rotated.
+#     fs : float, Hz
+#         Sampling rate.
+#     delta_f : float
+#         Change in power law exponent to be applied. Positive is counterclockwise
+#         rotation (flatten), negative is clockwise rotation (steepen).
+#     f_rotation : float, Hz
+#         Axis of rotation frequency, such that power at that frequency is unchanged
+#         by the rotation. Only matters if not further normalizing signal variance.
+#
+#     Returns
+#     -------
+#     x : array, 1-D
+#         Power-law rotated time-series.
+#
+#     """
+#
+#     # compute FFT and frequency axis
+#     FC = np.fft.fft(data)
+#     f_axis = np.fft.fftfreq(len(data), 1./fs)
+#
+#     # make the 1/f mask
+#     f_mask = np.zeros_like(f_axis)
+#     f_mask[1:] = 10**(np.log10(np.abs(f_axis[1:]))*(delta_f/2))
+#     f_mask[0]=1.
+#
+#     # normalize power at rotation frequency
+#     f_mask = f_mask/f_mask[np.where(f_axis>=f_rotation)[0][0]]
+#
+#     return np.real(np.fft.ifft(FC*f_mask))
 
 
 # def compute_features(data, fs, fooof_fit_range=[10,100]):

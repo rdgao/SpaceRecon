@@ -137,6 +137,9 @@ def delay_embed(data, tau, max_dim):
         Delay embedding reconstructed data in higher dimension.
 
     """
+    if type(tau) is not int:
+        tau = int(tau)
+
     num_samples = len(data) - tau * (max_dim - 1)
     return np.array([data[dim * tau:num_samples + dim * tau] for dim in range(max_dim)]).T
 
