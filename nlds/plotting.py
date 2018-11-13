@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
-def plot_statespace_trial(x, ax=None, lc='k', alpha=0.8, mark_ind=None, mark_color=None, ms=20):
+def plot_statespace_trial(x, ax=None, step=1, lc='k', alpha=0.8, mark_ind=None, mark_color=None, ms=20):
     """Plot a single statespace trajectory, in 2D or 3D.
 
     Parameters
@@ -22,25 +22,26 @@ def plot_statespace_trial(x, ax=None, lc='k', alpha=0.8, mark_ind=None, mark_col
     """
     if mark_ind is not None and mark_color is None:
         # if no marker color specified, use default
-        mark_color = [None]*len(mark_ind)
+        #mark_color = [None]*len(mark_ind)
+        mark_color = plt.rcParams['axes.prop_cycle'].by_key()['color'][:len(mark_ind)]
 
     sig_len, ndim = x.shape
     if ndim == 2:
         if ax is None:
             ax = plt.subplot(projection=None)
 
-        ax.plot(x[:,0], x[:,1], '-', color=lc, alpha=alpha, lw=1)
+        ax.plot(x[::step,0], x[::step,1], '-', color=lc, alpha=alpha, lw=1)
         if mark_ind is not None:
-            ax.scatter(x[mark_ind,0], x[mark_ind,1], marker='o', color=mark_color, s=ms)
+            ax.scatter(x[mark_ind,0], x[mark_ind,1], marker='o', c=mark_color, s=ms)
 
     elif ndim > 2:
         if ax is None:
             ax = plt.subplot(projection='3d')
 
-        ax.plot3D(x[:,0], x[:,1], x[:,2], '-', color=lc, alpha=alpha, lw=1)
+        ax.plot3D(x[::step,0], x[::step,1], x[::step,2], '-', color=lc, alpha=alpha, lw=1)
         if mark_ind is not None:
-            ax.scatter(x[mark_ind,0], x[mark_ind,1], x[mark_ind,2], marker='o', color=mark_color, s=ms)
-            
+            ax.scatter(x[mark_ind,0], x[mark_ind,1], x[mark_ind,2], marker='o', c=mark_color, s=ms)
+
         ax.grid('off')
 
     return ax
