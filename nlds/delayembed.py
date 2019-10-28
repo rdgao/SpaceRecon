@@ -241,7 +241,7 @@ def compute_attractor_dim(del_R, rel_R, pfnn_thr=0.01, R_thr=15., A_thr=2.):
     return attr_dim, pfnn
 
 
-def pfnn_de_dim(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2.):
+def PFNN(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2.):
     """Proportion of False Nearest Neighbor method for determining Delay Embedding
     Attractor Dimension. (Kennel et al., 1992).
 
