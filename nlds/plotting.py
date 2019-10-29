@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
-def plot_statespace_trial(x, ax=None, step=1, lc='k', alpha=0.8, mark_ind=None, mark_color=None, ms=20):
-    """Plot a single statespace trajectory, in 2D or 3D.
+def plot_trajectory(x, ax=None, step=1, lc='k', alpha=0.8, mark_ind=None, mark_color=None, ms=20):
+    """Plot a statespace trajectory, in 2D or 3D.
 
     Parameters
     ----------
@@ -42,6 +42,6 @@ def plot_statespace_trial(x, ax=None, step=1, lc='k', alpha=0.8, mark_ind=None, 
         if mark_ind is not None:
             ax.scatter(x[mark_ind,0], x[mark_ind,1], x[mark_ind,2], marker='o', c=mark_color, s=ms)
 
-        ax.grid('off')
+        ax.grid(None)
 
     return ax

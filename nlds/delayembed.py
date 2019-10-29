@@ -182,14 +182,25 @@ def compute_nn_dist(data, tau=10, max_dim=5):
 
     for dim in range(max_dim):
         # compute nearest neighbor index with sklearn.nearestneighbors
+        #   here, training and test data is the same set, so it will always
+        #   return at least 1 neighbor, which is the point itself, so we want
+        #   the second nearest neighbor
         dist, idx = NearestNeighbors(n_neighbors=2, algorithm='kd_tree').fit(
             data_vec[:, :(dim + 1)]).kneighbors(data_vec[:, :(dim + 1)])
 
         # compute the increase in neighbor distance going to the next dim
         next_d = dim + 1
+
         ndist = data_vec[:, next_d] - data_vec[idx[:, 1].astype('int'), next_d]
         # gain in neighbor distance relative to current distance
+        # eq 4 in Kennel et al.
+        #   NOTE: there is an issue when the embeded points are actually same
+        #   inf means points got separated, so that's fine
         del_R[:, dim] = abs(ndist) / dist[:, 1]
+
+        #   nan means 0/0, so neighbors didn't go anywhere -> replace by 0s
+        del_R[np.isnan(del_R[:, dim]), dim]=0.
+
         # distance of current dim's neighbors in the next dimension
         # relative to attractor size
         rel_R[:, dim] = (ndist**2 + dist[:, 1]**2)**0.5 / RA
