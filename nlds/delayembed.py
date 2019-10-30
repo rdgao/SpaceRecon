@@ -141,7 +141,7 @@ def delay_embed(data, tau, max_dim):
         tau = int(tau)
 
     num_samples = len(data) - tau * (max_dim - 1)
-    return np.array([data[dim * tau:num_samples + dim * tau] for dim in range(max_dim)]).T
+    return np.array([data[dim * tau:num_samples + dim * tau] for dim in range(max_dim)]).T[:,::-1]
 
 
 def compute_nn_dist(data, tau=10, max_dim=5):
@@ -252,7 +252,7 @@ def compute_attractor_dim(del_R, rel_R, pfnn_thr=0.01, R_thr=15., A_thr=2.):
     return attr_dim, pfnn
 
 
-def PFNN(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2.):
+def PFNN(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2., return_dist=False):
     """Proportion of False Nearest Neighbor method for determining Delay Embedding
     Attractor Dimension. (Kennel et al., 1992).
 
@@ -285,7 +285,11 @@ def PFNN(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2.):
     """
     del_R, rel_R = compute_nn_dist(data, tau=tau, max_dim=max_dim)
     attr_dim, pfnn = compute_attractor_dim(del_R=del_R, rel_R=rel_R)
-    return attr_dim, pfnn
+    if return_dist:
+        # return distances as well as dim estimates
+        return attr_dim, pfnn, del_R, rel_R
+    else:
+        return attr_dim, pfnn
 
 #
 #
