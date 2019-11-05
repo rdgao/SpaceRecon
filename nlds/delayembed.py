@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 from sklearn.metrics import mutual_info_score
 from sklearn.neighbors import NearestNeighbors
+from sklearn.decomposition import PCA
 
 
 def compute_MI(x, y, bins):
@@ -290,6 +291,11 @@ def PFNN(data, tau=10, max_dim=5, pfnn_thr=0.01, R_thr=15., A_thr=2., return_dis
         return attr_dim, pfnn, del_R, rel_R
     else:
         return attr_dim, pfnn
+
+def SSA(data, tau, max_dim):
+    data_embed = delay_embed(data, tau, max_dim)
+    return PCA(n_components=max_dim).fit(data_embed)
+
 
 #
 #

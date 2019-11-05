@@ -83,6 +83,12 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
     spk_binned = [np.histogram(spks,t_bins)[0] for spks in spikes_all]
     df_spk = pd.DataFrame(np.array(spk_binned).T, index=t_bins[:-1])
 
+    # compute populate rate in various areas
+    pop_rate = df_spk.sum(1)
+    for reg, grp in clu_info.groupby('region'):
+        df_spk.insert(0,reg,df_spk[grp.index].sum(1))
+    df_spk.insert(0,'all',pop_rate)
+
     if return_type is 'binned':
         return df_spk, clu_info
 
@@ -95,6 +101,17 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         df_spk_smo = pd.DataFrame(bin_smoothed, index=t_bins[:-1])
         return df_spk_smo, clu_info
 
+def return_pops(data, df_info):
+    pop_list, region_labels = [], []
+    for reg, grp in df_info.groupby('region'):
+        if type(data) is type(pd.DataFrame()):
+            # dataframe is passed in, all good
+            pop_list.append(np.squeeze(data[grp.index.values].values))
+        else:
+            # assume the group indices line up with the data array indices
+            pop_list.append(np.squeeze(data[grp.index.values]))
+        region_labels.append(reg)
+    return pop_list, region_labels
 
 def _beg_end(spikes_all):
     spikes_concat = np.concatenate(spikes_all)
