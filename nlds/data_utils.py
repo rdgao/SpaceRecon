@@ -102,6 +102,20 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         return df_spk_smo, clu_info
 
 def return_pops(data, df_info):
+    """ Return different populations in a list.
+
+    Parameters
+    ----------
+    data : matrix or dataframe, time x neuron.
+    df_info : dataframe
+        Cluster information for which region each cluster falls into.
+
+    Returns
+    -------
+    list
+        List of spiketime matrices, grouped based on region.
+
+    """
     pop_list, region_labels = [], []
     for reg, grp in df_info.groupby('region'):
         if type(data) is type(pd.DataFrame()):
